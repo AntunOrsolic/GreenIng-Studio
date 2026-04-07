@@ -951,8 +951,9 @@ section {
         padding: 0 15px;
     }
     .top-contact-link {
-        line-height: 0.2rem;
+        
         font-size: 0.8rem;
+        color: var(--bg-white);
     }
     .hero-title {
         font-size: 1.75rem;
