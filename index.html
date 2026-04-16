@@ -115,6 +115,7 @@
                     <ul class="nav-list">
                         <li><a href="#pocetna" class="nav-link">POČETNA</a></li>
                         <li><a href="#o-nama" class="nav-link">O NAMA</a></li>
+                        <li><a href="#vijesti" class="nav-link">VIJESTI</a></li>
                         <li><a href="#usluge" class="nav-link">USLUGE</a></li>
                         <li class="temp-hidden"><a href="#reference" class="nav-link">REFERENCE</a></li>
                         <li><a href="#kontakt" class="nav-link">KONTAKT</a></li>
@@ -391,6 +392,20 @@
                             priloge potrebne za izradu elaborata etažiranja i upis u zemljišne knjige.</p>
                     </div>
                 </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- NEWS (Headless WP via WPGraphQL) -->
+    <section id="vijesti" class="news">
+        <div class="container">
+            <h2 class="section-title fade-in">Vijesti</h2>
+            <p id="newsError" class="news-error" role="alert" hidden></p>
+            <div id="newsGrid" class="news-grid" aria-live="polite"></div>
+            <div class="news-actions">
+                <button type="button" id="loadMoreNews" class="btn btn-primary news-load-more" hidden>
+                    Učitaj još članaka
+                </button>
             </div>
         </div>
     </section>
