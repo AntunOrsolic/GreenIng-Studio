@@ -15,7 +15,7 @@
       "description": "Projektantsko-arhitektonski ured. Projektiranje stambenih i poslovnih objekata, Blower Door testovi, solarne elektrane, nadzor gradnje, legalizacija i energetski certifikati. Vrbanja i Županja.",
       "url": "https://greeningstudio.hr",
       "telephone": "+385 97 718 4895",
-      "email": "greeningstudio1@gmail.com",
+      "email": "info@greeningstudio.hr",
       "address": {
         "@type": "PostalAddress",
         "streetAddress": "Josipa Kozarca 32",
@@ -99,7 +99,7 @@
     <!-- TOP CONTACT BAR -->
     <div class="top-contact-bar">
         <div class="top-contact-inner">
-            <a href="mailto:greeningstudio1@gmail.com" class="top-contact-link">greeningstudio1@gmail.com</a>
+            <a href="mailto:info@greeningstudio.hr" class="top-contact-link">info@greeningstudio.hr</a>
             <span class="top-contact-sep">|</span>
             <a href="tel:+385977184895" class="top-contact-link">mob: +385 97 718 4895</a>
         </div>
@@ -415,7 +415,16 @@
         <div class="container">
             <h2 class="section-title fade-in">Kontakt</h2>
             <div class="contact-wrapper fade-in">
-                <form class="contact-form" id="contactForm" action="contact.php" method="POST">
+                <form class="contact-form" id="contactForm" action="contact.php" method="POST" autocomplete="on">
+                    <div class="honeypot-field" aria-hidden="true">
+                        <label for="website">Ostavite ovo polje praznim</label>
+                        <input
+                            type="text"
+                            id="website"
+                            name="website"
+                            tabindex="-1"
+                            autocomplete="off">
+                    </div>
                     <div class="form-group">
                         <label for="name">Ime i prezime *</label>
                         <input type="text" id="name" name="name" required>
@@ -431,6 +440,16 @@
                     <div class="form-group">
                         <label for="message">Poruka *</label>
                         <textarea id="message" name="message" rows="5" required></textarea>
+                    </div>
+                    <div class="form-group turnstile-group">
+                        <div
+                            class="cf-turnstile"
+                            data-sitekey="0x4AAAAAAFTAI68aZviMXT2N"
+                            data-theme="light"
+                            data-callback="onTurnstileSuccess"
+                            data-expired-callback="onTurnstileExpired"
+                            data-error-callback="onTurnstileError">
+                        </div>
                     </div>
                     <button type="submit" class="btn btn-primary">POŠALJI</button>
                     <div id="formMessage" class="form-message"></div>
@@ -517,6 +536,8 @@
     </footer>
 
     <script src="script.js"></script>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+
 </body>
 
 </html>

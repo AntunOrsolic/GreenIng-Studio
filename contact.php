@@ -1,6 +1,5 @@
 <?php
 header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST');
 header('Access-Control-Allow-Headers: Content-Type');
 
@@ -8,6 +7,158 @@ header('Access-Control-Allow-Headers: Content-Type');
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     echo json_encode(['success' => false, 'message' => 'Method not allowed']);
+    exit;
+}
+
+/**
+ * Simple IP rate limit: max N successful-attempt windows per hour.
+ * Uses system temp dir so no extra writable folder is required.
+ */
+function greening_rate_limit_ok(string $ip, int $maxAttempts = 5, int $windowSeconds = 3600): bool
+{
+    if ($ip === '' || $ip === '0.0.0.0') {
+        return true;
+    }
+
+    $safeIp = preg_replace('/[^a-fA-F0-9:\.]/', '_', $ip);
+    $file = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR)
+        . DIRECTORY_SEPARATOR
+        . 'greening_contact_'
+        . $safeIp
+        . '.json';
+
+    $now = time();
+    $timestamps = [];
+
+    if (is_file($file)) {
+        $raw = @file_get_contents($file);
+        $decoded = is_string($raw) ? json_decode($raw, true) : null;
+        if (is_array($decoded)) {
+            $timestamps = array_values(array_filter(
+                $decoded,
+                static function ($ts) use ($now, $windowSeconds) {
+                    return is_int($ts) && ($now - $ts) < $windowSeconds;
+                }
+            ));
+        }
+    }
+
+    if (count($timestamps) >= $maxAttempts) {
+        return false;
+    }
+
+    $timestamps[] = $now;
+    @file_put_contents($file, json_encode($timestamps), LOCK_EX);
+
+    return true;
+}
+
+/* Honeypot spam protection */
+$honeypot = $_POST['website'] ?? '';
+
+if (!is_string($honeypot) || trim($honeypot) !== '') {
+    http_response_code(400);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Zahtjev nije moguće obraditi.'
+    ]);
+    exit;
+}
+
+/* Cloudflare Turnstile verification */
+$configPath = '/home/greening/private/turnstile-config.php';
+
+if (!is_file($configPath)) {
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Sigurnosna provjera trenutačno nije dostupna.'
+    ]);
+    exit;
+}
+
+$turnstileConfig = require $configPath;
+
+$turnstileToken = $_POST['cf-turnstile-response'] ?? '';
+
+if (!is_string($turnstileToken) || $turnstileToken === '') {
+    http_response_code(403);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Sigurnosna provjera nije dovršena. Osvježite stranicu i pokušajte ponovno.'
+    ]);
+    exit;
+}
+
+if (
+    !is_array($turnstileConfig) ||
+    empty($turnstileConfig['secret_key']) ||
+    !function_exists('curl_init')
+) {
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Sigurnosna provjera trenutačno nije dostupna.'
+    ]);
+    exit;
+}
+
+$curl = curl_init(
+    'https://challenges.cloudflare.com/turnstile/v0/siteverify'
+);
+
+curl_setopt_array($curl, [
+    CURLOPT_POST => true,
+    CURLOPT_POSTFIELDS => http_build_query([
+        'secret' => $turnstileConfig['secret_key'],
+        'response' => $turnstileToken,
+        'remoteip' => $_SERVER['REMOTE_ADDR'] ?? ''
+    ]),
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT => 10,
+]);
+
+$verificationResponse = curl_exec($curl);
+$curlError = curl_errno($curl);
+$httpStatus = (int) curl_getinfo($curl, CURLINFO_HTTP_CODE);
+curl_close($curl);
+
+if (
+    $verificationResponse === false ||
+    $curlError !== 0 ||
+    $httpStatus !== 200
+) {
+    http_response_code(503);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Sigurnosna provjera trenutačno nije dostupna. Pokušajte ponovno.'
+    ]);
+    exit;
+}
+
+$verificationResult = json_decode($verificationResponse, true);
+
+if (
+    !is_array($verificationResult) ||
+    ($verificationResult['success'] ?? false) !== true
+) {
+    http_response_code(403);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Sigurnosna provjera nije uspjela. Pokušajte ponovno.'
+    ]);
+    exit;
+}
+
+$clientIp = $_SERVER['REMOTE_ADDR'] ?? '';
+
+if (!greening_rate_limit_ok($clientIp, 5, 3600)) {
+    http_response_code(429);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Previše poruka u kratkom vremenu. Pokušajte ponovno za sat vremena.'
+    ]);
     exit;
 }
 

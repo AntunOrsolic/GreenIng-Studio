@@ -364,49 +364,86 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ============================================
-// CONTACT FORM HANDLING
+// CONTACT FORM HANDLING (+ Cloudflare Turnstile)
 // ============================================
 const contactForm = document.getElementById('contactForm');
 const formMessage = document.getElementById('formMessage');
 
+function resetTurnstile() {
+    if (typeof turnstile !== 'undefined' && typeof turnstile.reset === 'function') {
+        try {
+            turnstile.reset();
+        } catch (err) {
+            // Widget may not be ready yet; ignore.
+        }
+    }
+}
+
+window.onTurnstileSuccess = function () {
+    // Token is injected into the form by Turnstile; nothing else required.
+};
+
+window.onTurnstileExpired = function () {
+    resetTurnstile();
+};
+
+window.onTurnstileError = function () {
+    if (formMessage) {
+        formMessage.textContent = 'Sigurnosna provjera nije uspjela. Osvježite stranicu i pokušajte ponovno.';
+        formMessage.className = 'form-message error';
+        formMessage.style.display = 'block';
+    }
+    resetTurnstile();
+};
+
 if (contactForm) {
     contactForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        
+
         const formData = new FormData(contactForm);
+        const turnstileToken = formData.get('cf-turnstile-response');
+
+        if (!turnstileToken) {
+            formMessage.textContent = 'Molimo pričekajte da se sigurnosna provjera završi pa pokušajte ponovno.';
+            formMessage.className = 'form-message error';
+            formMessage.style.display = 'block';
+            formMessage.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            return;
+        }
+
         const submitButton = contactForm.querySelector('button[type="submit"]');
         const originalButtonText = submitButton.textContent;
-        
-        // Disable submit button
+
         submitButton.disabled = true;
         submitButton.textContent = 'Šalje se...';
         formMessage.style.display = 'none';
-        
+
         try {
             const response = await fetch('contact.php', {
                 method: 'POST',
                 body: formData
             });
-            
+
             const result = await response.json();
-            
+
             if (result.success) {
                 formMessage.textContent = 'Poruka je uspješno poslana! Kontaktirat ćemo vas uskoro.';
                 formMessage.className = 'form-message success';
                 formMessage.style.display = 'block';
                 contactForm.reset();
-                
-                // Scroll to message
+                resetTurnstile();
                 formMessage.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             } else {
                 formMessage.textContent = result.message || 'Došlo je do greške. Molimo pokušajte ponovno.';
                 formMessage.className = 'form-message error';
                 formMessage.style.display = 'block';
+                resetTurnstile();
             }
         } catch (error) {
             formMessage.textContent = 'Došlo je do greške pri slanju poruke. Molimo pokušajte ponovno.';
             formMessage.className = 'form-message error';
             formMessage.style.display = 'block';
+            resetTurnstile();
         } finally {
             submitButton.disabled = false;
             submitButton.textContent = originalButtonText;

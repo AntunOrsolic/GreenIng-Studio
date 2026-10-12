@@ -701,6 +701,7 @@ section {
 }
 
 .contact-form {
+    position: relative;
     background-color: var(--bg-light);
     padding: 3rem;
     border-radius: 15px;
@@ -890,6 +891,24 @@ section {
     height: 20px;
     flex-shrink: 0;
 }
+
+
+.honeypot-field {
+    position: absolute !important;
+    left: -9999px !important;
+    top: 0 !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+.turnstile-group {
+    display: flex;
+    justify-content: flex-start;
+}
+
 
 /* Footer Links */
 .footer-links {
